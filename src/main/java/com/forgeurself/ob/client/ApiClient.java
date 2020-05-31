@@ -21,6 +21,8 @@ import java.security.NoSuchAlgorithmException;
 @Controller
 public class ApiClient {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApiClient.class);
+
     @Autowired
     RestClient restClient;
 
@@ -33,22 +35,21 @@ public class ApiClient {
     //@Autowired
     //private BCryptPasswordEncoder encoder;
 
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(ApiClient.class);
-
-   /* @RequestMapping(value = "/login", method = RequestMethod.POST)
+    @CrossOrigin(origins = "http://localhost:4200")
+    @RequestMapping(value = "/login", method = RequestMethod.POST)
     public ResponseEntity<?> login(@RequestParam("email") String email, @RequestParam("password") String password) {
 
         LOGGER.info("Inside login() and the email is: " + email);
-        boolean loginResponse = securityService.login(email, password);
-        if (loginResponse) {
+        //boolean loginResponse = securityService.login(email, password);
+        User userDet = userRepository.login(email, password);
+        if (userDet != null) {
             return new ResponseEntity<>("User logged in successfully ", HttpStatus.OK);
         } else {
             return new ResponseEntity<>("Invalid user name or password .Please try again.", HttpStatus.UNAUTHORIZED);
         }
-
     }
-*/
+
+    @CrossOrigin(origins = "http://localhost:4200")
     @RequestMapping(value = "/registerUser", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
     public ResponseEntity<?>  register(@RequestBody User user) {
         LOGGER.info("Creating User : {}" + user);
@@ -58,7 +59,7 @@ public class ApiClient {
             return new ResponseEntity<>("Unable to create. A User with name " +
                     user.getFirstName() + " already exist.", HttpStatus.CONFLICT);
         }else{
-           // user.setPassword(encoder.encode(user.getPassword()));
+            //user.setPassword(encoder.encode(user.getPassword()));
             user.setPassword(user.getPassword());
             userRepository.save(user);
             return new ResponseEntity<>("User registered successfully " +
@@ -67,18 +68,21 @@ public class ApiClient {
     }
 
     // TODO : call only once
+    @CrossOrigin(origins = "http://localhost:4200")
     @RequestMapping(value = "/token", method = RequestMethod.POST)
     public ResponseEntity<String> retrieveAccessToken() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         LOGGER.info("Retrieve Access Token");
         return restClient.retrieveAccessToken();
     }
 
+    @CrossOrigin(origins = "http://localhost:4200")
     @RequestMapping(value = "/accountaccessconsent", method = RequestMethod.POST)
     public ResponseEntity<String> submitAccountAccessConsent() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         LOGGER.info("Submit Account Access Consent");
         return restClient.submitAccountAccessConsent();
     }
 
+    @CrossOrigin(origins = "http://localhost:4200")
     @RequestMapping(value = "/accounts/{AccountId}",
             produces = {"application/json; charset=utf-8"},
             method = RequestMethod.GET)

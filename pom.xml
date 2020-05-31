@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.forgeurself.ob</groupId>
-  <artifactId>forgeurself-ob</artifactId>
+  <artifactId>forgeurself-openbanking</artifactId>
   <version>1.0-SNAPSHOT</version>
 
   <name>forgeurself-ob</name>
@@ -79,14 +79,14 @@
             <image>mcr.microsoft.com/java/jdk:8-zulu-alpine</image>
             <auth>
               <username>openbankingpoc</username>
-              <password>qKCV5Amn94Z1A2qOBeZiTjXyVmp/TVY9</password>
+              <password>zMTOL+e9RjT9CIL9aa=EnOUfgD+mH09e</password>
             </auth>
           </from>
           <to>
             <image>${docker.image.prefix}/${project.artifactId}</image>
             <auth>
               <username>openbankingpoc</username>
-              <password>qKCV5Amn94Z1A2qOBeZiTjXyVmp/TVY9</password>
+              <password>zMTOL+e9RjT9CIL9aa=EnOUfgD+mH09e</password>
             </auth>
           </to>
         </configuration>
