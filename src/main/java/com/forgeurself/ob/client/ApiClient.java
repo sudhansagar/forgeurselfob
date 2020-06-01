@@ -6,6 +6,8 @@ import com.forgeurself.ob.repos.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.json.JsonParser;
+import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -14,11 +16,13 @@ import org.springframework.web.bind.annotation.*;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Map;
 
 /**
  * @author madhusudhan.gr
  */
 @Controller
+@CrossOrigin(origins = {"http://localhost:4200", "http://forgeurself.eastasia.cloudapp.azure.com:4200"})
 public class ApiClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ApiClient.class);
@@ -35,65 +39,74 @@ public class ApiClient {
     //@Autowired
     //private BCryptPasswordEncoder encoder;
 
-    @CrossOrigin(origins = "http://localhost:4200")
-    @RequestMapping(value = "/login", method = RequestMethod.POST)
-    public ResponseEntity<?> login(@RequestParam("email") String email, @RequestParam("password") String password) {
+    @RequestMapping(value = "/login", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
+    public ResponseEntity<?> login(@RequestBody String input) {
+        LOGGER.info("Inside login() and the email is: " + input);
 
-        LOGGER.info("Inside login() and the email is: " + email);
+        JsonParser springParser = JsonParserFactory.getJsonParser();
+        String stringResponseEntity = input;
+        Map<String, Object> map = springParser.parseMap(stringResponseEntity);
+
         //boolean loginResponse = securityService.login(email, password);
-        User userDet = userRepository.login(email, password);
+        User userDet = userRepository.login(map.get("email").toString(), map.get("password").toString());
         if (userDet != null) {
-            return new ResponseEntity<>("User logged in successfully ", HttpStatus.OK);
+            return new ResponseEntity<>("{\"response\"" +":"+"\"User logged in successfully \"}", HttpStatus.OK);
         } else {
-            return new ResponseEntity<>("Invalid user name or password .Please try again.", HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>("{\"response\"" +":"+"\"Invalid user name or password.Please try again. \"}", HttpStatus.UNAUTHORIZED);
         }
     }
 
-    @CrossOrigin(origins = "http://localhost:4200")
     @RequestMapping(value = "/registerUser", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
-    public ResponseEntity<?>  register(@RequestBody User user) {
+    public ResponseEntity<?> register(@RequestBody User user) {
         LOGGER.info("Creating User : {}" + user);
         User userDet = userRepository.findByEmail(user.getEmail());
+
         if (userDet != null) {
             LOGGER.error("Unable to create. A User with name already exist", userDet.getFirstName());
-            return new ResponseEntity<>("Unable to create. A User with name " +
-                    user.getFirstName() + " already exist.", HttpStatus.CONFLICT);
+            return new ResponseEntity<>("{\"response\"" +":"+"\"Unable to create. A User with name " +
+                    user.getFirstName() + "already exist.\"}", HttpStatus.CONFLICT);
         }else{
             //user.setPassword(encoder.encode(user.getPassword()));
             user.setPassword(user.getPassword());
             userRepository.save(user);
-            return new ResponseEntity<>("User registered successfully " +
-                    user.getFirstName() , HttpStatus.CREATED);
+            return new ResponseEntity<>("{\"response\"" +":"+"\"User registered successfully " +
+                    user.getFirstName() + "\"}", HttpStatus.CREATED);
         }
     }
 
-    // TODO : call only once
-    @CrossOrigin(origins = "http://localhost:4200")
-    @RequestMapping(value = "/token", method = RequestMethod.POST)
+    @RequestMapping(value = "/token", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
     public ResponseEntity<String> retrieveAccessToken() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         LOGGER.info("Retrieve Access Token");
         return restClient.retrieveAccessToken();
     }
 
-    @CrossOrigin(origins = "http://localhost:4200")
-    @RequestMapping(value = "/accountaccessconsent", method = RequestMethod.POST)
+    @RequestMapping(value = "/exchangetoken", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
+    public ResponseEntity<String> exchangeCodeAccessToken(@RequestBody String input) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        LOGGER.info("Retrieve Access Token");
+        return restClient.exchangeCodeAccessToken(input);
+    }
+
+    @RequestMapping(value = "/accountaccessconsent", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
     public ResponseEntity<String> submitAccountAccessConsent() throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         LOGGER.info("Submit Account Access Consent");
         return restClient.submitAccountAccessConsent();
     }
 
-    @CrossOrigin(origins = "http://localhost:4200")
-    @RequestMapping(value = "/accounts/{AccountId}",
-            produces = {"application/json; charset=utf-8"},
-            method = RequestMethod.GET)
-    public String getAccount(@PathVariable("AccountId") String accountId
-            , @RequestParam(value = "An Authorisation Token as per https://tools.ietf.org/html/rfc6750", required = true) @RequestHeader(value = "Authorization", required = true) String authorization
-            , @RequestParam(value = "The time when the PSU last logged in with the TPP.  All dates in the HTTP headers are represented as RFC 7231 Full Dates. An example is below:  Sun, 10 Sep 2017 19:43:31 UTC") @RequestHeader(value = "x-fapi-auth-date", required = false) String xFapiAuthDate
-            , @RequestParam(value = "The PSU's IP address if the PSU is currently logged in with the TPP.") @RequestHeader(value = "x-fapi-customer-ip-address", required = false) String xFapiCustomerIpAddress
-            , @RequestParam(value = "An RFC4122 UID used as a correlation id.") @RequestHeader(value = "x-fapi-interaction-id", required = false) String xFapiInteractionId
-    ) {
+    @RequestMapping(value = "/accounts", produces = {"application/json; charset=utf-8"}, method = RequestMethod.GET)
+    public ResponseEntity<String> getAccountDetails(@RequestHeader(value = "Authorization") String authCode) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        LOGGER.info("Get account details");
+        return restClient.getAccountDetails(authCode);
+    }
 
+    @RequestMapping(value = "/accounts/transactions", produces = {"application/json; charset=utf-8"}, method = RequestMethod.POST)
+    public ResponseEntity<String> getAccountTransactions(@RequestBody String input, @RequestHeader(value = "Authorization") String authCode) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        LOGGER.info("Get Account Transaction Details");
+        return restClient.getAccountTransactionDetails(input, authCode);
+    }
 
-        return accountId;
+    @RequestMapping(value = "/accounts/balances", produces = {"application/json; charset=utf-8"}, method = RequestMethod.POST)
+    public ResponseEntity<String> getAccountBalances(@RequestBody String input, @RequestHeader(value = "Authorization") String authCode) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        LOGGER.info("Get Account Transaction Details");
+        return restClient.getAcntBalances(input, authCode);
     }
 }
