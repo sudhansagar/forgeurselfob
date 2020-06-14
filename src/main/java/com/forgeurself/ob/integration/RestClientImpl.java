@@ -1,12 +1,18 @@
 package com.forgeurself.ob.integration;
 
-import com.forgeurself.ob.client.ApiClient;
+import com.forgeurself.ob.entities.HomeLoan;
+import com.forgeurself.ob.entities.User;
+import com.forgeurself.ob.repos.LoanRepository;
+import com.forgeurself.ob.repos.UserRepository;
+import com.forgeurself.ob.utils.AzureBlobStorageUtils;
+import com.forgeurself.ob.utils.PDFGenerator;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.json.JsonParser;
 import org.springframework.boot.json.JsonParserFactory;
@@ -24,6 +30,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
+import java.util.Random;
 
 
 @Component
@@ -51,6 +58,53 @@ public class RestClientImpl implements RestClient {
 
     @Value("${com.forgeurself.ob.accounts}")
     private String FETCH_ACCOUNTS;
+
+    @Value("${com.forgeurself.ob.loanAppDirpath}")
+    private String LOAN_APP_DIR;
+
+    @Autowired
+    private UserRepository userRepo;
+
+    @Autowired
+    private LoanRepository loanRepo;
+
+    @Autowired
+    PDFGenerator pdfGenerator;
+
+    @Autowired
+    AzureBlobStorageUtils azureUtils;
+
+    @Override
+    public ResponseEntity<String> validateUser(String input) {
+        JsonParser springParser = JsonParserFactory.getJsonParser();
+        String stringResponseEntity = input;
+        Map<String, Object> map = springParser.parseMap(stringResponseEntity);
+
+        //boolean loginResponse = securityService.login(email, password);
+        User userDet = userRepo.login(map.get("email").toString(), map.get("password").toString());
+        if (userDet != null) {
+            return new ResponseEntity<>("{\"response\"" +":"+"\"User logged in successfully \"}", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("{\"response\"" +":"+"\"Invalid user name or password.Please try again. \"}", HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @Override
+    public ResponseEntity<String> registerUser(User user) {
+        User userDet = userRepo.findByEmail(user.getEmail());
+
+        if (userDet != null) {
+            LOGGER.error("Unable to create. A User with name already exist", userDet.getFirstName());
+            return new ResponseEntity<>("{\"response\"" +":"+"\"Unable to create. A User with name " +
+                    user.getFirstName() + "already exist.\"}", HttpStatus.CONFLICT);
+        }else{
+            //user.setPassword(encoder.encode(user.getPassword()));
+            user.setPassword(user.getPassword());
+            userRepo.save(user);
+            return new ResponseEntity<>("{\"response\"" +":"+"\"User registered successfully " +
+                    user.getFirstName() + "\"}", HttpStatus.CREATED);
+        }
+    }
 
     @Override
     public ResponseEntity<String> retrieveAccessToken() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
@@ -205,6 +259,40 @@ public class RestClientImpl implements RestClient {
         return responseEntity;
     }
 
+    @Override
+    public ResponseEntity<String> loanApplnDetails(HomeLoan userLoanDet) {
+
+        String resMsg = null;
+        Random rand = new Random();
+        int rand_int = rand.nextInt(100000);
+        String fileName =  "LoanApp_"+userLoanDet.getFullName()+"_"+rand_int + ".pdf";
+        String filePath = LOAN_APP_DIR + fileName;
+
+        LOGGER.debug("Persisting the Loan Application");
+        userLoanDet.setApplnName(fileName);
+        userLoanDet.setMailStatus("P");
+        loanRepo.save(userLoanDet);
+
+        LOGGER.debug("Generating the Loan Application");
+        boolean genStatus = pdfGenerator.generateAppln(userLoanDet, filePath);
+
+        boolean uploadStatus = false;
+
+        if(genStatus){
+            resMsg = "generated successfully ";
+            uploadStatus = azureUtils.blobFileStorage(LOAN_APP_DIR, fileName);
+        }else{
+            resMsg = "generated failed ";
+        }
+        if(uploadStatus){
+            resMsg = resMsg.concat(" and uploaded successfully");
+        }else
+            resMsg = resMsg.concat(" and uploaded failed");
+
+        return new ResponseEntity<>("{\"response\"" +":"+"\"Loan Application "  + resMsg
+                + "\"}", HttpStatus.OK);
+    }
+
     private HttpComponentsClientHttpRequestFactory getHttpComponentsClientHttpRequestFactory() throws NoSuchAlgorithmException, KeyManagementException, KeyStoreException {
         TrustStrategy acceptingTrustStrategy = new TrustStrategy() {
             @Override
@@ -229,5 +317,4 @@ public class RestClientImpl implements RestClient {
         requestFactory.setHttpClient(httpClient);
         return requestFactory;
     }
-
 }

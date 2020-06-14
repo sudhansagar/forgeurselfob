@@ -58,6 +58,29 @@
       <version>8.2.2.jre8</version>
     </dependency>
     <dependency>
+      <groupId>com.itextpdf</groupId>
+      <artifactId>itextpdf</artifactId>
+      <version>5.5.13</version>
+    </dependency>
+
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
+      <version>4.1.47.Final</version>
+    </dependency>
+    <dependency>
+      <groupId>io.projectreactor</groupId>
+      <artifactId>reactor-core</artifactId>
+      <version>3.3.1.RELEASE</version>
+    </dependency>
+
+    <dependency>
+      <groupId>com.azure</groupId>
+      <artifactId>azure-storage-blob</artifactId>
+      <version>12.6.0</version>
+    </dependency>
+
+    <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
@@ -79,14 +102,14 @@
             <image>mcr.microsoft.com/java/jdk:8-zulu-alpine</image>
             <auth>
               <username>openbankingpoc</username>
-              <password>zMTOL+e9RjT9CIL9aa=EnOUfgD+mH09e</password>
+              <password>xxxx</password>
             </auth>
           </from>
           <to>
             <image>${docker.image.prefix}/${project.artifactId}</image>
             <auth>
               <username>openbankingpoc</username>
-              <password>zMTOL+e9RjT9CIL9aa=EnOUfgD+mH09e</password>
+              <password>xxxx</password>
             </auth>
           </to>
         </configuration>

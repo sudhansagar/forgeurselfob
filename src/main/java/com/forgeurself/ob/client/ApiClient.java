@@ -1,5 +1,6 @@
 package com.forgeurself.ob.client;
 
+import com.forgeurself.ob.entities.HomeLoan;
 import com.forgeurself.ob.entities.User;
 import com.forgeurself.ob.integration.RestClient;
 import com.forgeurself.ob.repos.UserRepository;
@@ -11,6 +12,7 @@ import org.springframework.boot.json.JsonParserFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.KeyManagementException;
@@ -30,9 +32,6 @@ public class ApiClient {
     @Autowired
     RestClient restClient;
 
-    @Autowired
-    private UserRepository userRepository;
-
   //  @Autowired
    // private SecurityService securityService;
 
@@ -42,36 +41,13 @@ public class ApiClient {
     @RequestMapping(value = "/login", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
     public ResponseEntity<?> login(@RequestBody String input) {
         LOGGER.info("Inside login() and the email is: " + input);
-
-        JsonParser springParser = JsonParserFactory.getJsonParser();
-        String stringResponseEntity = input;
-        Map<String, Object> map = springParser.parseMap(stringResponseEntity);
-
-        //boolean loginResponse = securityService.login(email, password);
-        User userDet = userRepository.login(map.get("email").toString(), map.get("password").toString());
-        if (userDet != null) {
-            return new ResponseEntity<>("{\"response\"" +":"+"\"User logged in successfully \"}", HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("{\"response\"" +":"+"\"Invalid user name or password.Please try again. \"}", HttpStatus.UNAUTHORIZED);
-        }
+        return restClient.validateUser(input);
     }
 
     @RequestMapping(value = "/registerUser", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
     public ResponseEntity<?> register(@RequestBody User user) {
         LOGGER.info("Creating User : {}" + user);
-        User userDet = userRepository.findByEmail(user.getEmail());
-
-        if (userDet != null) {
-            LOGGER.error("Unable to create. A User with name already exist", userDet.getFirstName());
-            return new ResponseEntity<>("{\"response\"" +":"+"\"Unable to create. A User with name " +
-                    user.getFirstName() + "already exist.\"}", HttpStatus.CONFLICT);
-        }else{
-            //user.setPassword(encoder.encode(user.getPassword()));
-            user.setPassword(user.getPassword());
-            userRepository.save(user);
-            return new ResponseEntity<>("{\"response\"" +":"+"\"User registered successfully " +
-                    user.getFirstName() + "\"}", HttpStatus.CREATED);
-        }
+        return restClient.registerUser(user);
     }
 
     @RequestMapping(value = "/token", consumes = "application/json", produces = "application/json", method = RequestMethod.POST)
@@ -109,4 +85,11 @@ public class ApiClient {
         LOGGER.info("Get Account Transaction Details");
         return restClient.getAcntBalances(input, authCode);
     }
+
+    @RequestMapping(value = "/submitDetails", produces = {"application/json; charset=utf-8"}, method = RequestMethod.POST)
+    public ResponseEntity<String>  completeReservation(@RequestBody HomeLoan input) {
+        LOGGER.info("Fetching Loan Application details " + input);
+        return restClient.loanApplnDetails(input);
+    }
+
 }
